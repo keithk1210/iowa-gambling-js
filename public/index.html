@@ -176,6 +176,21 @@
             // Check if the canvas element is available in the DOM
             console.log("Initialize Chart!");
             const canvasElement = document.getElementById('moneyChart');
+
+            let maxReward = 0;
+            let maxPenalty = 0; 
+
+            for (setting in deckSettings) {
+                if (deckSettings[setting].reward > maxReward) {
+                    maxReward = deckSettings[setting].reward;
+                }
+                for (let i = 0; i < deckSettings[setting].penalty.length; i++) {
+                    if (Math.abs(deckSettings[setting].penalty[i]) >  maxPenalty) {
+                        maxPenalty = Math.abs(deckSettings[setting].penalty[i]);
+                    }
+                }
+            }
+
             if (canvasElement) {
                 const ctx = canvasElement.getContext('2d');
                 new Chart(ctx, {
@@ -206,7 +221,8 @@
                         title: {
                             display: true,
                             text: 'Amount in Dollars ($)'
-                        }
+                        },
+                        max: Math.max(Math.ceil(moneyGained/10000),Math.ceil(moneyLost/10000)) * 10000 // Set the maximum value for the y-axis
                     }
                 },
                 plugins: {
