@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iowa Gambling Task</title>
+    <!-- Import JsPsych CSS --> 
+
+    <script src="https://unpkg.com/jspsych@8.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@2.0.0"></script>
+    <link href="https://unpkg.com/jspsych@8.0.0/css/jspsych.css" rel="stylesheet" type="text/css" />
+
+    <style>
+      /* Style the decks as buttons */
+      .deck {
+        width: 150px;
+        height: 200px;
+        border-radius: 10px;
+        border: 2px solid #333;
+        display: inline-block;
+        margin: 20px;
+        font-size: 18px;
+        text-align: center;
+        line-height: 200px;
+        cursor: pointer;
+        background-color: #f4f4f9;
+        transition: transform 0.2s;
+      }
+      
+      .deck:hover {
+        transform: scale(1.05);
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: #e0e0e0;
+        padding: 20px;
+
+      }
+      .jspsych-btn {
+        font-size: 18px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #28a745;
+        color: white;
+        margin-top: 20px;
+      }
+      .jspsych-display-element {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .title {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .bar-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .bar {
+        height: 40px;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        transition: width 0.4s ease-in-out;
+      }
+
+      .lost-bar {
+        background-color: #e74c3c;
+      }
+
+      .gained-bar {
+        background-color: #2ecc71;
+      }
+
+      .bar-label {
+        font-size: 14px;
+        margin-right: 10px;
+      }
+
+      .values {
+        text-align: center;
+        font-size: 18px;
+        margin-top: 20px;
+      }
+
+    </style>
+</head>
+<body>
+    <!-- Container for the experiment -->
+    <div id="jspsych-target"></div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      // Game settings
+      const numTrials = 100; // Total number of trials
+      let totalMoney = 2000; // Starting money
+      let moneyGained = 0;
+      let moneyLost = 0;
+      const decks = ['A', 'B', 'C', 'D']; // Deck identifiers
+
+      // Deck configurations: [reward, penalty]
+      const deckSettings = {
+        'A': {reward: 100, penalty: [-150, -300, -200, -250, 0], badDeck: true},
+        'B': {reward: 100, penalty: [-1250, -1250, -1250, -1250, 0], badDeck: true},
+        'C': {reward: 50, penalty: [-25, -50, -75, -50, 0], badDeck: false},
+        'D': {reward: 50, penalty: [-25, -50, -25, -75, 0], badDeck: false},
+      };
+
+      // function updateBars(lost, gained) {
+      //   moneyLost = lost;
+      //   moneyGained = gained;
+      //   const total = moneyLost + moneyGained;
+
+      //   // Calculate the percentage widths for each bar
+      //   const lostPercentage = (moneyLost / total) * 100;
+      //   const gainedPercentage = (moneyGained / total) * 100;
+
+      //   // Update the widths of the bars and text values
+      //   const lostBar = document.getElementById('lost-bar');
+      //   const gainedBar = document.getElementById('gained-bar');
+      //   const lostValue = document.getElementById('lost-value');
+      //   const gainedValue = document.getElementById('gained-value');
+
+      //   lostBar.style.width = `${lostPercentage}%`;
+      //   gainedBar.style.width = `${gainedPercentage}%`;
+
+      //   lostBar.textContent = `${lostPercentage.toFixed(1)}%`;
+      //   gainedBar.textContent = `${gainedPercentage.toFixed(1)}%`;
+
+      //   lostValue.textContent = moneyLost.toFixed(2);
+      //   gainedValue.textContent = moneyGained.toFixed(2);
+      //   }
+
+      // Function to randomly select a penalty
+      function getRandomPenalty(deck) {
+        const penalties = deckSettings[deck].penalty;
+        const randomIndex = Math.floor(Math.random() * penalties.length);
+        console.log("Random Index: ", randomIndex, "Penalties: ", penalties);
+        return penalties[randomIndex];
+      }
+
+      function initializeChart() {
+            // Check if the canvas element is available in the DOM
+            console.log("Initialize Chart!");
+            const canvasElement = document.getElementById('moneyChart');
+            if (canvasElement) {
+                const ctx = canvasElement.getContext('2d');
+                new Chart(ctx, {
+            type: 'bar', // Type of chart
+            data: {
+                labels: ['Gained', 'Lost'], // X-axis labels
+                datasets: [{
+                    label: 'Amount in Dollars', // Dataset label
+                    data: [moneyGained, moneyLost], // Data values for the bars
+                    backgroundColor: ['#2ecc71', '#e74c3c'], // Colors for the bars
+                    borderColor: ['#27ae60', '#c0392b'], // Border colors for the bars
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    x: {
+                        beginAtZero: true, // Start x-axis at zero
+                        title: {
+                            display: true,
+                            text: 'Transaction Type'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true, // Start y-axis at zero
+                        title: {
+                            display: true,
+                            text: 'Amount in Dollars ($)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false // Hide the legend
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.raw;
+                                return `${label}: $${value}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+                console.log("Canvas element found!");
+            } else {
+                console.error('Canvas element not found!');
+            }
+        }
+
+      // Create a trial
+      function createTrial(trialNumber) {
+        // const lostPercentage = (moneyLost / total) * 100;
+        // const gainedPercentage = (moneyGained / total) * 100;
+        return {
+          type: jsPsychHtmlButtonResponse,
+          stimulus: `
+            <div style="font-size: 24px; text-align: center;">
+              <p>Trial ${trialNumber} of ${numTrials}</p>
+              <p>Total Money: $${totalMoney}</p>
+            </div>
+            <div style="display: flex; justify-content: center; align-items: center;">
+              ${decks.map(deck => `
+                <button class="deck" id="deck-${deck}">
+                  Deck ${deck}
+                </button>`).join('')}
+            </div>
+            
+            <div class="container">
+              <h1 class="title">Money Gained vs. Lost</h1>
+              <canvas id="moneyChart"></canvas>
+            </div>
+            `,
+          choices: decks,
+          on_load: function() {
+             // Render the chart
+            console.log("ON_LOAD!");
+            console.log(document.getElementById('moneyChart'));
+            initializeChart();
+          },
+          on_finish: function(data) {
+            const chosenDeck = decks[data.response];
+            console.log("Data.response: ", data);
+            let netChange = 0;
+            if (Math.random() < .5) {
+              netChange = getRandomPenalty(chosenDeck);
+            } else {
+              netChange = deckSettings[chosenDeck].reward;
+            }
+            
+            totalMoney += netChange;
+            
+
+            data.chosenDeck = chosenDeck;
+            data.netChange = netChange;
+            data.totalMoney = totalMoney;
+            data.badDeck = deckSettings[chosenDeck].badDeck;
+
+            if (netChange > 0) {
+              moneyGained += netChange;
+            } else {
+              moneyLost += netChange * -1;
+            }
+            
+          }
+        };
+      }
+
+      // Create feedback after each trial
+      function createFeedback(trialNumber) {
+        return {
+          type: jsPsychHtmlButtonResponse,
+          stimulus: function() {
+            const lastTrial = jsPsych.data.get().last(1).values()[0];
+            return `
+              <div style="font-size: 24px; text-align: center;">
+                <p>Trial ${trialNumber} of ${numTrials} Complete!</p>
+                <p>Deck Chosen: ${lastTrial.chosenDeck}</p>
+
+                ${lastTrial.netChange == 0 ? `<p>No change in money.</p>` : `
+                  <p>${lastTrial.netChange > 0 ? `You gained ${lastTrial.netChange}! :D` : `You lost $${lastTrial.netChange * -1} :(`}</p>
+                `}
+
+                <p>Total Money: $${lastTrial.totalMoney}</p>
+              </div>`;
+          },
+          choices: ['Next'],
+        };
+      }
+
+      // Instructions
+      var instructions = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+          <div style="font-size: 24px; text-align: center;">
+            <p>Welcome to the Iowa Gambling Task!</p>
+            <p>You will be presented with four decks of cards.</p>
+            <p>Your goal is to win as much money as possible.</p>
+            <p>Some decks are better than others in the long run.</p>
+          </div>`,
+        choices: ['Start'],
+      };
+
+      // Debriefing at the end of the experiment
+      var debrief = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: function() {
+          let goodDecks = 0;
+          let badDecks = 0;
+          jsPsych.data.get().filter({trial_type: jsPsychHtmlButtonResponse}).values().forEach((trial) => {
+            if (trial.badDeck) {
+              badDecks++;
+            } else {
+              goodDecks++;
+            }
+          });
+
+          return `
+            <div style="font-size: 24px; text-align: center;">
+              <p>Thank you for participating in the Iowa Gambling Task!</p>
+              <p>Your final balance is $${totalMoney}.</p>
+              <p>You chose "good" decks ${goodDecks} times and "bad" decks ${badDecks} times.</p>
+              <p>Good decks give lower rewards but also lower penalties.</p>
+              <p>Bad decks may give higher rewards but often result in higher penalties.</p>
+            </div>`;
+        },
+        choices: ['End'],
+        on_finish: function() {
+          jsPsych.data.displayData(); // Display the collected data
+        }
+      };
+
+      // Build the timeline
+      var timeline = [];
+
+      // Add instructions
+      timeline.push(instructions);
+
+      // Add trials and feedback
+      for (let i = 1; i <= numTrials; i++) {
+        timeline.push(createTrial(i));
+        timeline.push(createFeedback(i));
+      }
+
+      // Add debrief
+      const jsPsych = initJsPsych({
+        display_element: 'jspsych-target', 
+        on_finish: function() {
+          jsPsych.data.displayData(); // Optionally display the data
+        }
+      });
+
+      jsPsych.run(timeline);
+    </script>
+</body>
+</html>
